@@ -38,16 +38,18 @@ void grupo_alternar(int grupo_id) {
   }
 }
 
-void estado_aplicar_mgmask(uint32_t mgmask) {
-  for (int grupo = 0; grupo < GRP_COUNT; grupo++) {
-    bool ativo = (mgmask & (1UL << grupo)) == 0;
-    for (int i = 0; i < NUM_CANAIS; i++) {
-      if (CANAIS[i].grupo == grupo) estado_canal[i] = ativo;
-    }
-  }
+void enviar_mute_para_mesa(int numero_canal, bool ativo) {
+  mixer_link_enviar_mute(numero_canal, ativo);
 }
 
-void enviar_mute_para_mesa(int numero_canal, bool ativo) {
-  if (numero_canal < 1 || numero_canal > 22) return;
-  mixer_link_set_channel_unmute((uint8_t)numero_canal, ativo);
+static EstadoMudouCb cb_mudou = NULL;
+
+void estado_set_callback(EstadoMudouCb cb) {
+  cb_mudou = cb;
+}
+
+void canal_set_ativo_remoto(int indice_canal, bool ativo) {
+  if (estado_canal[indice_canal] == ativo) return;
+  estado_canal[indice_canal] = ativo;
+  if (cb_mudou) cb_mudou(indice_canal);
 }

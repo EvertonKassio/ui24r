@@ -26,11 +26,14 @@ void canal_alternar(int indice_canal);
 bool grupo_get_ativo(int grupo_id);
 void grupo_alternar(int grupo_id);
 
-/* Aplica a mascara de mute groups recebida da mesa aos canais da interface. */
-void estado_aplicar_mgmask(uint32_t mgmask);
-
-/* Chamada sempre que o usuario muda o estado de um canal pela tela.
- * Hoje e apenas um stub (nao existe conexao real com a mesa ainda).
- * Quando o protocolo da Ui24R for implementado, envie o comando de
- * mute real para o canal "canal" (numero de 1-22, ver data.h) aqui. */
+/* Chamada sempre que o usuario muda o estado de um canal pela tela:
+ * envia o comando de mute para a mesa (se estiver conectada; se nao,
+ * so o estado local muda). "numero_canal" e o numero 1-22 de data.h. */
 void enviar_mute_para_mesa(int numero_canal, bool ativo);
+
+/* Estado vindo DA MESA (alguem mexeu no mute no app/mesa, ou o
+ * estado inicial enviado ao conectar). Atualiza o estado local SEM
+ * reenviar nada para a mesa e avisa a interface via callback. */
+typedef void (*EstadoMudouCb)(int indice_canal);
+void estado_set_callback(EstadoMudouCb cb);
+void canal_set_ativo_remoto(int indice_canal, bool ativo);

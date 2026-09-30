@@ -5,23 +5,51 @@ Interface de controle para a mesa **Soundcraft Ui24R**, rodando no display
 RGB, toque capacitivo GT911). Feita com **LVGL 8.3** + **Arduino_GFX**, via
 **PlatformIO**.
 
-## Estado atual (importante)
+## Integração com a mesa (habilitada)
 
-Como pedido, esta primeira versão **não conversa com a mesa ainda**:
+O painel agora conversa de verdade com a Ui24R:
 
-- A tela **conecta de verdade no Wi-Fi** da mesa (rede `Soundcraft Ui24`,
-  aberta) e mostra o status real dessa conexão (conectando / conectado /
-  desconectado) no topo da tela principal.
-- Só o **Wi-Fi** é real. O **estado dos canais (mute/ativo) é 100% local**:
-  tocar num botão só muda a cor na tela, nada é enviado para a mesa. A
-  Ui24R usa um protocolo próprio (não é OSC nem algo documentado
-  publicamente pela Soundcraft), então essa parte fica para quando você
-  tiver a mesa por perto para testar e capturar o protocolo.
-- O ponto de extensão já está pronto: a função `enviar_mute_para_mesa()`
-  em `src/state.cpp` é chamada toda vez que o usuário muda o estado de um
-  canal pela tela — é só implementar o envio real ali dentro. Da mesma
-  forma, `mixer_link.cpp` é onde entraria a leitura do estado real dos
-  canais vindo da mesa (hoje só cuida do Wi-Fi).
+- Conecta no Wi-Fi `Soundcraft Ui24` (aberto) e abre um **WebSocket** em
+  `ws://10.10.1.1:80/` — o mesmo canal que a interface web da mesa usa.
+- **Tocar num canal/grupo envia o mute** para a mesa
+  (`3:::SETD^i.<canal-1>.mute^<0|1>`; canal 1 da planilha = entrada `i.0`).
+- **Estado vindo da mesa**: ao conectar, a mesa envia o estado atual de
+  todos os canais e a tela se ajusta sozinha; depois, qualquer mute
+  mudado no app/na mesa por outro aparelho aparece na tela na hora.
+- **O estado de cada canal é lido da mesa, canal por canal** — nunca
+  deduzido do grupo. Mutar um grupo manda o comando para todos os
+  canais dele, mas não bloqueia nada: dá para abrir um canal
+  individual de um grupo mutado (pela tela, ou por outro aparelho), e
+  o bloco do grupo só aparece "mutado" quando todos os canais dele
+  estão mutados.
+- A mesa só continua informando o estado se receber o comando `ALIVE`:
+  o painel envia `3:::ALIVE` a cada 1 s.
+- Como a mesa também é operada por outros aparelhos, o painel recebe e
+  aplica cada mudança na hora. Como rede de segurança, se ficar 15 s
+  sem receber nada da mesa ele reconecta, e a cada 30 s (com a tela
+  parada) faz uma releitura completa do estado, reconectando em
+  silêncio (a mesa despeja tudo ao conectar). Ajustável em
+  `mixer_link.cpp`: `WATCHDOG_MS`, `RESYNC_INTERVALO_MS` (0 desliga).
+  O monitor serial mostra a cada 5 s um resumo
+  (`[mesa] ws=1 msgs=... mutes=...`) para você ver se as mensagens estão
+  chegando.
+- O topo da tela principal mostra o status real: conectando / conectado
+  (WebSocket aberto) / desconectado. Reconecta sozinho.
+- Sem conexão, os toques continuam mudando as cores localmente (dá pra
+  testar a interface longe da mesa); ao conectar, o estado da mesa
+  prevalece.
+- Ajustes em `src/mixer_link.cpp`: `MESA_IP` (mude se a mesa estiver numa
+  rede existente, com o `WIFI_SSID`/`WIFI_SENHA` dessa rede) e
+  `WIFI_HABILITADO 0` para desligar toda a integração (modo teste).
+
+**Atenção:** o protocolo foi montado a partir de documentação pública
+da comunidade (não da Soundcraft) e **não pude testar contra uma mesa
+de verdade**. Pontos que valem conferir no primeiro teste (o monitor
+serial, 115200, mostra `[mesa] WebSocket conectado`): se o mute fica
+invertido (mutado aparecendo como ativo), troque `v < 0.5f` por
+`v > 0.5f` em `processar_linha()` e `ativo ? 0 : 1` por `ativo ? 1 : 0`
+em `mixer_link_enviar_mute()`; se os canais não batem, ajuste o
+mapeamento `canal - 1` (entradas `i.N`) nas mesmas funções.
 
 ## O que a interface faz
 
@@ -46,30 +74,29 @@ Como pedido, esta primeira versão **não conversa com a mesa ainda**:
 - **Visual**: tema escuro, cada grupo/canal com uma cor de identificação;
   canal **mutado** = só a borda colorida; canal **ativo** = botão
   totalmente preenchido com a cor. Ícones para cada instrumento/tipo de
-  canal (nada de texto cortado por acento faltando — ver nota abaixo).
+  canal. Os textos são sem acentuação de propósito — ver nota abaixo.
 
-## Por que os textos não usam fonte "de verdade" do LVGL
+## Por que os textos não têm acento (Violao, Midia, conexao...)
 
-O conversor de fonte oficial do LVGL (`lv_font_conv`) precisa de Node.js e
-não estava disponível para gerar isso aqui. Para não perder acentos do
-português (Violão, Mídia, "conexão", "à mesa"...) — que **não** existem nos
-fontes Montserrat embutidos do LVGL (só ASCII) — cada texto da interface
-foi pré-renderizado como uma **imagem bitmap** (mesma técnica dos ícones),
-com a fonte Poppins, por `tools/gen_texts.py`. Isso já está pronto e
-gerado em `src/texts.c/h` — você não precisa rodar nada para isso
-funcionar. Só rótulos curtos sem acento (o número do canal, "MUTE") usam
-fonte de verdade do LVGL, porque esses continuam editáveis/dinâmicos.
+A interface usa as fontes prontas do LVGL (Montserrat), que só cobrem
+caracteres ASCII — sem acento, um "ã" ou "ç" apareceria como um quadrado
+vazio na tela. Gerar uma fonte customizada com acentuação exigiria o
+conversor oficial do LVGL (`lv_font_conv`, precisa de Node.js) rodando
+localmente na sua máquina, o que tira a simplicidade de só abrir o
+PlatformIO e compilar. Por isso todos os nomes em `src/data.h` e os
+textos fixos em `src/ui.cpp` são escritos sem acento (ex.: "Violao",
+"Midia", "Sem Fio", "conexao").
 
-Se um dia você quiser trocar algum texto, edite a lista `MANIFESTO` em
-`tools/gen_texts.py` e rode `python3 tools/gen_texts.py src` de novo (o
-mesmo vale para ícones novos em `tools/gen_icons.py`).
+Se quiser trocar algum nome de canal, é só editar a string em
+`src/data.h` (coluna `nome` de cada canal) — sem acento, por causa do
+que foi explicado acima.
 
 ## Como compilar
 
 Precisa do [PlatformIO](https://platformio.org/) (CLI ou extensão do
 VS Code). Não precisa instalar Git nem nada manualmente além dele — o
-`platformio.ini` já lista as 3 bibliotecas usadas (Arduino_GFX, LVGL
-8.3, TAMC_GT911) pelo **registro do PlatformIO**, então o PlatformIO
+`platformio.ini` já lista as 4 bibliotecas usadas (Arduino_GFX, LVGL
+8.3, TAMC_GT911, WebSockets) pelo **registro do PlatformIO**, então o PlatformIO
 baixa tudo sozinho (como um zip, sem clonar repositório) na primeira
 compilação.
 
@@ -108,7 +135,7 @@ mudar.
   combinação de placa+biblioteca — a tabela de inicialização do painel
   que a maioria dos exemplos por aí usa (`st7701_type1_init_operations`)
   deixa as cores invertidas nesta placa especificamente. O projeto já
-  vem configurado com a tabela certa (`st7701_type9_init_operations`).
+  vem configurado com a tabela certa (`st7701_type8_init_operations`).
   Se mesmo assim as cores ainda saírem erradas, tente estas duas coisas,
   uma de cada vez:
   1. `PAINEL_INVERTER_CORES` para `1` em `src/board_config.h`;
@@ -159,13 +186,12 @@ src/
   board_config.h        pinagem e parâmetros de calibração do toque
   display.h / .cpp       inicialização do painel (Arduino_GFX) + toque (GT911) + LVGL
   data.h                 tabela de canais e grupos (a partir de Canais.xlsx)
-  state.h / .cpp          estado local de mute + ponto de extensão p/ a mesa
-  mixer_link.h / .cpp     conexão Wi-Fi com a mesa (protocolo da mesa: TODO)
+  state.h / .cpp          estado de mute dos canais (local + sincronizado com a mesa)
+  mixer_link.h / .cpp     conexão Wi-Fi + WebSocket com a mesa (comandos e estado)
   ui.h / .cpp             as telas em si (LVGL)
   icons.c / .h            ícones (gerados por tools/gen_icons.py)
-  texts.c / .h            textos em bitmap, com acentos (tools/gen_texts.py)
   main.cpp                setup()/loop()
 tools/
-  gen_icons.py           gerador dos ícones (não precisa rodar de novo)
-  gen_texts.py           gerador dos textos (não precisa rodar de novo)
+  gen_icons.py           gerador dos ícones (não precisa rodar de novo,
+                         só se quiser adicionar/editar algum ícone)
 ```

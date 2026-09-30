@@ -27,7 +27,7 @@ static Arduino_ESP32RGBPanel *rgbpanel = new Arduino_ESP32RGBPanel(
 static Arduino_RGB_Display *gfx = new Arduino_RGB_Display(
     LCD_LARGURA, LCD_ALTURA, rgbpanel, PAINEL_ROTACAO, true /* auto_flush */,
     bus, GFX_NOT_DEFINED /* RST */,
-  st7701_type9_init_operations, sizeof(st7701_type9_init_operations));
+    st7701_type8_init_operations, sizeof(st7701_type8_init_operations));
 
 /* ------------------------------------------------------------ toque */
 static TAMC_GT911 ts = TAMC_GT911(
@@ -39,13 +39,6 @@ static const uint32_t LINHAS_BUFFER = 60; /* altura de cada buffer parcial */
 static lv_disp_draw_buf_t draw_buf;
 static lv_color_t *buf1;
 static lv_color_t *buf2;
-static const uint32_t TEMPO_APAGAR_TELA_MS = 10UL * 60UL * 1000UL;
-static const uint32_t INTERVALO_TOQUE_DUPLO_MS = 700;
-static uint32_t ultimo_toque_ms = 0;
-static uint32_t primeiro_toque_ms = 0;
-static bool tela_iluminada = true;
-static bool toque_anterior = false;
-static bool suprimir_toque_ate_soltar = false;
 static lv_disp_drv_t disp_drv;
 static lv_indev_drv_t indev_drv;
 
@@ -58,44 +51,6 @@ static void lvgl_flush_cb(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t
 
 static void lvgl_touch_cb(lv_indev_drv_t *drv, lv_indev_data_t *data) {
   ts.read();
-  uint32_t agora = millis();
-
-  if (suprimir_toque_ate_soltar) {
-    data->state = LV_INDEV_STATE_RELEASED;
-    if (!ts.isTouched) suprimir_toque_ate_soltar = false;
-    toque_anterior = ts.isTouched;
-    return;
-  }
-
-  if (!tela_iluminada) {
-    data->state = LV_INDEV_STATE_RELEASED;
-    if (ts.isTouched && !toque_anterior) {
-      if (primeiro_toque_ms != 0 && agora - primeiro_toque_ms <= INTERVALO_TOQUE_DUPLO_MS) {
-        digitalWrite(PINO_RETROILUM, HIGH);
-        tela_iluminada = true;
-        ultimo_toque_ms = agora;
-        primeiro_toque_ms = 0;
-        suprimir_toque_ate_soltar = true;
-      } else {
-        primeiro_toque_ms = agora;
-      }
-    }
-    toque_anterior = ts.isTouched;
-    return;
-  }
-
-  if (ts.isTouched) {
-    ultimo_toque_ms = agora;
-  } else if (agora - ultimo_toque_ms >= TEMPO_APAGAR_TELA_MS) {
-    digitalWrite(PINO_RETROILUM, LOW);
-    tela_iluminada = false;
-    primeiro_toque_ms = 0;
-    toque_anterior = false;
-    data->state = LV_INDEV_STATE_RELEASED;
-    return;
-  }
-
-  toque_anterior = ts.isTouched;
   if (ts.isTouched) {
     int32_t x = ts.points[0].x;
     int32_t y = ts.points[0].y;
@@ -114,8 +69,8 @@ static void lvgl_touch_cb(lv_indev_drv_t *drv, lv_indev_data_t *data) {
 #if DEBUG_TOQUE
     static int32_t x_bruto_ant = -1, y_bruto_ant = -1;
     if (ts.points[0].x != x_bruto_ant || ts.points[0].y != y_bruto_ant) {
-      //Serial.printf("[toque] bruto=(%d,%d) calibrado=(%ld,%ld)\n",
-      //              ts.points[0].x, ts.points[0].y, (long)x, (long)y);
+      Serial.printf("[toque] bruto=(%d,%d) calibrado=(%ld,%ld)\n",
+                    ts.points[0].x, ts.points[0].y, (long)x, (long)y);
       x_bruto_ant = ts.points[0].x;
       y_bruto_ant = ts.points[0].y;
     }
@@ -132,7 +87,6 @@ void display_init() {
   gfx->begin();
   gfx->invertDisplay(PAINEL_INVERTER_CORES ? true : false);
   gfx->fillScreen(BLACK);
-  gfx->flush();
 
   Wire.begin(PINO_TOQUE_SDA, PINO_TOQUE_SCL);
   ts.begin();
@@ -162,6 +116,5 @@ void display_init() {
   indev_drv.long_press_time = TOQUE_LONGO_MS;
   lv_indev_drv_register(&indev_drv);
 
-  ultimo_toque_ms = millis();
   digitalWrite(PINO_RETROILUM, HIGH);
 }

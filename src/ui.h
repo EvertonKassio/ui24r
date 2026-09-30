@@ -8,6 +8,3 @@ void ui_init();
 /* Atualiza o texto/indicador de status de conexao mostrado na tela
  * principal. Chame periodicamente do loop() com o status atual. */
 void ui_set_status(StatusMesa status);
-
-/* Atualiza os estados visuais depois de uma mensagem recebida da mesa. */
-void ui_refresh_state();

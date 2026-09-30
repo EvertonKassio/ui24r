@@ -28,7 +28,6 @@ static const lv_color_t COR_FUNDO_TELA = LV_COLOR_MAKE(0x0A, 0x0A, 0x0C);
 static const lv_color_t COR_FUNDO_BOTAO = LV_COLOR_MAKE(0x18, 0x18, 0x1C);
 static const lv_color_t COR_TEXTO_CLARO = LV_COLOR_MAKE(0xEF, 0xEF, 0xF2);
 static const lv_color_t COR_TEXTO_ESCURO = LV_COLOR_MAKE(0x10, 0x10, 0x12);
-static const lv_color_t COR_VERMELHO = LV_COLOR_MAKE(0xFF, 0x00, 0x00);
 
 /* ------------------------------------------------------------- refs */
 struct RefGrupo {
@@ -102,11 +101,6 @@ static void atualizar_visual_canal(int idx) {
   }
 }
 
-void ui_refresh_state() {
-  for (int g = 0; g < GRP_COUNT; g++) atualizar_visual_grupo(g);
-  for (int i = 0; i < NUM_CANAIS; i++) atualizar_visual_canal(i);
-}
-
 /* ------------------------------------------------------------ eventos */
 static void cb_grupo_pressed(lv_event_t *e) {
   int g = (int)(intptr_t)lv_event_get_user_data(e);
@@ -116,7 +110,7 @@ static void cb_grupo_pressed(lv_event_t *e) {
 static void cb_grupo_longpress(lv_event_t *e) {
   int g = (int)(intptr_t)lv_event_get_user_data(e);
   refs_grupo[g].long_press_ocorreu = true;
-  lv_scr_load(scr_grupo[g]);
+  lv_scr_load_anim(scr_grupo[g], LV_SCR_LOAD_ANIM_MOVE_LEFT, 180, 0, false);
 }
 
 static void cb_grupo_clicked(lv_event_t *e) {
@@ -125,26 +119,38 @@ static void cb_grupo_clicked(lv_event_t *e) {
     refs_grupo[g].long_press_ocorreu = false;
     return;
   }
-  bool novo_estado = !grupo_get_ativo(g);
   grupo_alternar(g);
-  mixer_link_set_group_mute(g, !novo_estado);
   atualizar_visual_grupo(g);
+  /* os botoes de canal desse grupo (na tela do grupo) acompanham */
+  for (int i = 0; i < NUM_CANAIS; i++) {
+    if (CANAIS[i].grupo == g) atualizar_visual_canal(i);
+  }
 }
 
 static void cb_canal_clicked(lv_event_t *e) {
   int idx = (int)(intptr_t)lv_event_get_user_data(e);
   canal_alternar(idx);
   atualizar_visual_canal(idx);
+  int g = CANAIS[idx].grupo;
+  if (g >= 0) atualizar_visual_grupo(g); /* o bloco do grupo depende dos canais */
+}
+
+/* mudanca de estado vinda da mesa (estado inicial ou alteracao feita
+ * por outro aparelho): so redesenha, nada e reenviado */
+static void cb_estado_remoto(int idx) {
+  atualizar_visual_canal(idx);
+  int g = CANAIS[idx].grupo;
+  if (g >= 0) atualizar_visual_grupo(g);
 }
 
 static void cb_abrir_todos(lv_event_t *e) {
   (void)e;
-  lv_scr_load(scr_todos);
+  lv_scr_load_anim(scr_todos, LV_SCR_LOAD_ANIM_MOVE_LEFT, 180, 0, false);
 }
 
 static void cb_voltar_principal(lv_event_t *e) {
   (void)e;
-  lv_scr_load(scr_principal);
+  lv_scr_load_anim(scr_principal, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 180, 0, false);
 }
 
 /* ----------------------------------------------------------- widgets */
@@ -178,14 +184,14 @@ static lv_obj_t *criar_topbar_principal(lv_obj_t *parent) {
   lv_img_set_src(wifi, ICONES[IC_WIFI][2]);
   lv_obj_set_style_img_recolor(wifi, COR_TEXTO_CLARO, 0);
   lv_obj_set_style_img_recolor_opa(wifi, LV_OPA_80, 0);
-  lv_obj_align(wifi, LV_ALIGN_TOP_LEFT, 0, 15);
+  lv_obj_align(wifi, LV_ALIGN_TOP_LEFT, 0, 30);
 
   lbl_status = lv_label_create(bar);
   lv_label_set_text(lbl_status, "Modo teste - sem conexao com a mesa");
   lv_obj_set_style_text_font(lbl_status, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_color(lbl_status, COR_TEXTO_CLARO, 0);
   lv_obj_set_style_text_opa(lbl_status, LV_OPA_80, 0);
-  lv_obj_align(lbl_status, LV_ALIGN_TOP_LEFT, 45, 30);
+  lv_obj_align(lbl_status, LV_ALIGN_TOP_LEFT, 34, 33);
 
   lv_obj_t *btn = lv_obj_create(bar);
   lv_obj_set_size(btn, 48, 48);
@@ -256,9 +262,7 @@ static lv_obj_t *criar_bloco_grupo(lv_obj_t *parent, int g) {
   lv_obj_t *title = lv_label_create(tile);
   lv_label_set_text(title, info.nome);
   lv_obj_set_style_text_font(title, &lv_font_montserrat_24, 0);
-  lv_obj_set_width(title, LV_PCT(100));
-  lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 106);
+  lv_obj_align_to(title, icon, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
 
   char buf_sub[16];
   snprintf(buf_sub, sizeof(buf_sub), "%d canais", grupo_contar_canais(g));
@@ -266,9 +270,7 @@ static lv_obj_t *criar_bloco_grupo(lv_obj_t *parent, int g) {
   lv_label_set_text(sub, buf_sub);
   lv_obj_set_style_text_font(sub, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_opa(sub, LV_OPA_70, 0);
-  lv_obj_set_width(sub, LV_PCT(100));
-  lv_obj_set_style_text_align(sub, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_align(sub, LV_ALIGN_TOP_MID, 0, 142);
+  lv_obj_align_to(sub, title, LV_ALIGN_OUT_BOTTOM_MID, 0, 6);
 
   refs_grupo[g] = { tile, icon, title, sub, g, false };
   lv_obj_add_event_cb(tile, cb_grupo_pressed, LV_EVENT_PRESSED, (void *)(intptr_t)g);
@@ -329,7 +331,7 @@ static lv_obj_t *criar_botao_canal_completo(lv_obj_t *parent, int idx) {
   lv_obj_t *tag_mute = lv_label_create(btn);
   lv_label_set_text(tag_mute, "MUTE");
   lv_obj_set_style_text_font(tag_mute, &lv_font_montserrat_14, 0);
-  lv_obj_set_style_text_color(tag_mute, COR_VERMELHO, 0);
+  lv_obj_set_style_text_color(tag_mute, cor_do_canal(idx), 0);
   lv_obj_align(tag_mute, LV_ALIGN_TOP_RIGHT, 0, 0);
 
   lv_obj_t *icon = lv_img_create(btn);
@@ -340,7 +342,7 @@ static lv_obj_t *criar_botao_canal_completo(lv_obj_t *parent, int idx) {
    * (ex.: "Microfone Sem Fio Branco") em vez de estourar o botao */
   lv_obj_t *label = lv_label_create(btn);
   lv_label_set_text(label, c.nome);
-  lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+  lv_label_set_long_mode(label, LV_LABEL_LONG_MODE_WRAP);
   lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_font(label, &lv_font_montserrat_14, 0);
   lv_obj_set_width(label, LV_PCT(100));
@@ -453,6 +455,7 @@ void ui_init() {
   for (int g = 0; g < GRP_COUNT; g++) construir_scr_grupo(g);
   construir_scr_todos();
   lv_scr_load(scr_principal);
+  estado_set_callback(cb_estado_remoto);
 }
 
 void ui_set_status(StatusMesa status) {

@@ -29,5 +29,5 @@ void loop() {
   lv_timer_handler();
   mixer_link_loop();
   ui_set_status(mixer_link_status());
-  delay(2);
+  delay(5);
 }
