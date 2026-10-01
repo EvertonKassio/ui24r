@@ -38,9 +38,14 @@
 #include <stdlib.h>
 
 #define WIFI_HABILITADO      1
-#define WIFI_SSID            "Soundcraft Ui24"
-#define WIFI_SENHA           "" /* rede aberta, sem senha */
-#define MESA_IP              "10.10.1.1"
+//#define WIFI_SSID            "Soundcraft Ui24"
+//#define WIFI_SENHA           "" /* rede aberta, sem senha */
+//#define MESA_IP              "10.10.1.1"
+
+#define WIFI_SSID            "IDM_SOM"
+#define WIFI_SENHA           "48816137" /* rede aberta, sem senha */
+#define MESA_IP              "10.0.0.106"
+
 #define MESA_PORTA           80
 #define WIFI_TIMEOUT_MS      8000
 #define WIFI_RETENTAR_MS     6000

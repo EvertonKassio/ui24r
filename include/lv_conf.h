@@ -16,8 +16,8 @@
 #define LV_MEM_ADR 0
 
 /*------------- tick / temporizacao -------------*/
-#define LV_DISP_DEF_REFR_PERIOD 30
-#define LV_INDEV_DEF_READ_PERIOD 30
+#define LV_DISP_DEF_REFR_PERIOD 17
+#define LV_INDEV_DEF_READ_PERIOD 17
 #define LV_TICK_CUSTOM 0 /* usamos lv_tick_set_cb() manualmente em display.cpp */
 
 /*------------- funcionalidades basicas -------------*/
@@ -59,7 +59,7 @@
 #define LV_USE_THEME_DEFAULT 1
 #define LV_THEME_DEFAULT_DARK 1
 #define LV_THEME_DEFAULT_GROW 1
-#define LV_THEME_DEFAULT_TRANSITION_TIME 80
+#define LV_THEME_DEFAULT_TRANSITION_TIME 10
 #define LV_USE_THEME_BASIC 0
 #define LV_USE_THEME_MONO 0
 
@@ -81,7 +81,8 @@
 #define LV_USE_LOG 0
 #define LV_USE_ASSERT_NULL 1
 #define LV_USE_ASSERT_MALLOC 1
-#define LV_USE_PERF_MONITOR 0
+#define LV_USE_PERF_MONITOR 1
+#define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_RIGHT
 #define LV_USE_MEM_MONITOR 0
 
 /*------------- sistema de arquivos (nao usado) -------------*/

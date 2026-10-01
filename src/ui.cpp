@@ -28,6 +28,7 @@ static const lv_color_t COR_FUNDO_TELA = LV_COLOR_MAKE(0x0A, 0x0A, 0x0C);
 static const lv_color_t COR_FUNDO_BOTAO = LV_COLOR_MAKE(0x18, 0x18, 0x1C);
 static const lv_color_t COR_TEXTO_CLARO = LV_COLOR_MAKE(0xEF, 0xEF, 0xF2);
 static const lv_color_t COR_TEXTO_ESCURO = LV_COLOR_MAKE(0x10, 0x10, 0x12);
+static const lv_color_t COR_VERMELHO = LV_COLOR_MAKE(0xFF, 0x00, 0x00);
 
 /* ------------------------------------------------------------- refs */
 struct RefGrupo {
@@ -145,12 +146,12 @@ static void cb_estado_remoto(int idx) {
 
 static void cb_abrir_todos(lv_event_t *e) {
   (void)e;
-  lv_scr_load_anim(scr_todos, LV_SCR_LOAD_ANIM_MOVE_LEFT, 180, 0, false);
+  lv_scr_load_anim(scr_todos, LV_SCR_LOAD_ANIM_MOVE_LEFT, 0, 0, false);
 }
 
 static void cb_voltar_principal(lv_event_t *e) {
   (void)e;
-  lv_scr_load_anim(scr_principal, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 180, 0, false);
+  lv_scr_load_anim(scr_principal, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 0, 0, false);
 }
 
 /* ----------------------------------------------------------- widgets */
@@ -184,14 +185,14 @@ static lv_obj_t *criar_topbar_principal(lv_obj_t *parent) {
   lv_img_set_src(wifi, ICONES[IC_WIFI][2]);
   lv_obj_set_style_img_recolor(wifi, COR_TEXTO_CLARO, 0);
   lv_obj_set_style_img_recolor_opa(wifi, LV_OPA_80, 0);
-  lv_obj_align(wifi, LV_ALIGN_TOP_LEFT, 0, 30);
+  lv_obj_align(wifi, LV_ALIGN_TOP_LEFT, 0, 15);
 
   lbl_status = lv_label_create(bar);
   lv_label_set_text(lbl_status, "Modo teste - sem conexao com a mesa");
   lv_obj_set_style_text_font(lbl_status, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_color(lbl_status, COR_TEXTO_CLARO, 0);
   lv_obj_set_style_text_opa(lbl_status, LV_OPA_80, 0);
-  lv_obj_align(lbl_status, LV_ALIGN_TOP_LEFT, 34, 33);
+  lv_obj_align(lbl_status, LV_ALIGN_TOP_LEFT, 45, 30);
 
   lv_obj_t *btn = lv_obj_create(bar);
   lv_obj_set_size(btn, 48, 48);
@@ -262,7 +263,9 @@ static lv_obj_t *criar_bloco_grupo(lv_obj_t *parent, int g) {
   lv_obj_t *title = lv_label_create(tile);
   lv_label_set_text(title, info.nome);
   lv_obj_set_style_text_font(title, &lv_font_montserrat_24, 0);
-  lv_obj_align_to(title, icon, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
+  lv_obj_set_width(title, LV_PCT(100));
+  lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 106);
 
   char buf_sub[16];
   snprintf(buf_sub, sizeof(buf_sub), "%d canais", grupo_contar_canais(g));
@@ -270,7 +273,9 @@ static lv_obj_t *criar_bloco_grupo(lv_obj_t *parent, int g) {
   lv_label_set_text(sub, buf_sub);
   lv_obj_set_style_text_font(sub, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_opa(sub, LV_OPA_70, 0);
-  lv_obj_align_to(sub, title, LV_ALIGN_OUT_BOTTOM_MID, 0, 6);
+  lv_obj_set_width(sub, LV_PCT(100));
+  lv_obj_set_style_text_align(sub, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_align(sub, LV_ALIGN_TOP_MID, 0, 142);
 
   refs_grupo[g] = { tile, icon, title, sub, g, false };
   lv_obj_add_event_cb(tile, cb_grupo_pressed, LV_EVENT_PRESSED, (void *)(intptr_t)g);
@@ -331,7 +336,7 @@ static lv_obj_t *criar_botao_canal_completo(lv_obj_t *parent, int idx) {
   lv_obj_t *tag_mute = lv_label_create(btn);
   lv_label_set_text(tag_mute, "MUTE");
   lv_obj_set_style_text_font(tag_mute, &lv_font_montserrat_14, 0);
-  lv_obj_set_style_text_color(tag_mute, cor_do_canal(idx), 0);
+  lv_obj_set_style_text_color(tag_mute, COR_VERMELHO, 0);
   lv_obj_align(tag_mute, LV_ALIGN_TOP_RIGHT, 0, 0);
 
   lv_obj_t *icon = lv_img_create(btn);
@@ -342,7 +347,7 @@ static lv_obj_t *criar_botao_canal_completo(lv_obj_t *parent, int idx) {
    * (ex.: "Microfone Sem Fio Branco") em vez de estourar o botao */
   lv_obj_t *label = lv_label_create(btn);
   lv_label_set_text(label, c.nome);
-  lv_label_set_long_mode(label, LV_LABEL_LONG_MODE_WRAP);
+  lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
   lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_font(label, &lv_font_montserrat_14, 0);
   lv_obj_set_width(label, LV_PCT(100));

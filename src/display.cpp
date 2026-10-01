@@ -27,7 +27,7 @@ static Arduino_ESP32RGBPanel *rgbpanel = new Arduino_ESP32RGBPanel(
 static Arduino_RGB_Display *gfx = new Arduino_RGB_Display(
     LCD_LARGURA, LCD_ALTURA, rgbpanel, PAINEL_ROTACAO, true /* auto_flush */,
     bus, GFX_NOT_DEFINED /* RST */,
-    st7701_type8_init_operations, sizeof(st7701_type8_init_operations));
+    st7701_type9_init_operations, sizeof(st7701_type9_init_operations));
 
 /* ------------------------------------------------------------ toque */
 static TAMC_GT911 ts = TAMC_GT911(

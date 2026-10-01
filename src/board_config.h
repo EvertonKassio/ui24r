@@ -49,7 +49,7 @@
 /* Gire o conteudo se ele aparecer de lado (como se a tela estivesse
  * deitada): tente 0, depois 1, 2 e 3, nessa ordem, ate o texto
  * "Painel de Canais" aparecer na horizontal e na orientacao certa. */
-#define PAINEL_ROTACAO      0
+#define PAINEL_ROTACAO      2
 
 /* Mude para 1 se as cores aparecerem erradas/em negativo (fundo que
  * deveria ser bem escuro aparecendo claro/colorido, por exemplo). */
@@ -79,4 +79,4 @@
 #define DEBUG_TOQUE        1
 
 /* Tempo (ms) do toque longo para abrir a tela de canais de um grupo */
-#define TOQUE_LONGO_MS     1500
+#define TOQUE_LONGO_MS     500
